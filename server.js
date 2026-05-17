@@ -4,7 +4,15 @@ const WebSocket = require('ws');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); // 🔓 Allows GitHub Pages frontend to pull historical data safely
+
+// 🔓 Robust, aggressive CORS handling to guarantee GitHub Pages can connect
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.set('trust proxy', 1); // Allow Render's reverse proxy to route WebSockets cleanly
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -124,7 +132,11 @@ function trainModel(newVolume, newChange) {
     modelState.trainedPoints = n;
 }
 
-// 🌐 HISTORY API ENDPOINT
+// 🌐 HISTORY API ENDPOINT WITH ROOT DISAGREEMENT PROTECTION
+app.get('/', (req, res) => {
+    res.send("Tri-Asset AI Engine Gateway is Active.");
+});
+
 app.get('/api/history', (req, res) => {
     res.json(marketHistory);
 });
@@ -317,24 +329,20 @@ function processAndEmitPayload(payload) {
     const chg = parseFloat(payload.change || 0);
     const base = parseFloat(payload.currentPrice || 0);
 
-    // 1. Structural Pattern Vector Verification
     const patternMetrics = analyzePatternTrend(payload.symbol, base);
     payload.detectedPattern = patternMetrics.pattern;
     payload.predictedBias = patternMetrics.bias;
 
-    // 2. Machine Learning Linear Regression Interpolation
     trainModel(vol, chg);
     const predictionPct = (modelState.slope * vol) + modelState.intercept;
     payload.aiPredictedTarget = chg > 0 ? base * (1 + Math.abs(predictionPct) / 100) : base * (1 - Math.abs(predictionPct) / 100);
     payload.modelAccuracyPoints = modelState.trainedPoints;
     payload.modelConfidence = Math.min(Math.abs(modelState.slope * 100) + 45, 99.4).toFixed(1);
 
-    // 3. Save to memory cache 
     marketHistory = marketHistory.filter(item => item.symbol !== payload.symbol);
     marketHistory.push(payload);
     if (marketHistory.length > MAX_HISTORY_LIMIT) marketHistory.shift();
 
-    // 4. Broadcast network out
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(payload));
@@ -342,8 +350,10 @@ function processAndEmitPayload(payload) {
     });
 }
 
-// 🌐 SOCKET MESSAGE MANAGER
-wss.on('connection', (ws) => {
+// 🌐 SOCKET MESSAGE MANAGER WITH CONSOLE VERIFICATION
+wss.on('connection', (ws, req) => {
+    console.log(`📡 Client connected successfully from origin: ${req.headers.origin}`);
+
     ws.on('message', (msg) => {
         try {
             const parsed = JSON.parse(msg);

@@ -109,7 +109,6 @@
     </main>
 
     <script>
-        // Updated Endpoint configurations matching live production service name
         const BACKEND_HTTP = "https://momentum-scanner-u5re.onrender.com";
         const BACKEND_WS = "wss://momentum-scanner-u5re.onrender.com";
 
@@ -117,7 +116,6 @@
         let socket = null;
         let heartbeatInterval = null;
 
-        // Charting tracking nodes
         let chart = null,
             candleSeries = null,
             currentChartAsset = null;
@@ -205,15 +203,18 @@
             document.getElementById('chart-legend-metrics').textContent = `O: ${activeCandle.open.toFixed(2)} | H: ${activeCandle.high.toFixed(2)} | L: ${activeCandle.low.toFixed(2)} | C: ${activeCandle.close.toFixed(2)}`;
         }
 
-        // 🌐 CONNECTION LAYER
+        // 🌐 CONNECTION LAYER WITH AUTOMATIC PROTOCOL RESILIENCE
         function setupWebSocket() {
+            console.log("Attempting WebSocket handshake to: " + BACKEND_WS);
             socket = new WebSocket(BACKEND_WS);
 
             socket.onopen = () => {
+                console.log("WebSocket connection verified by browser.");
                 const badge = document.getElementById('socket-status-badge');
                 badge.className = "px-2.5 py-1 text-[10px] font-mono font-bold rounded bg-emerald-950 text-emerald-400 border border-emerald-900";
                 badge.textContent = "SYNCHRONIZED METRICS";
 
+                clearInterval(heartbeatInterval);
                 heartbeatInterval = setInterval(() => {
                     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({
                         type: 'PING'
@@ -228,12 +229,17 @@
                 } catch (e) {}
             };
 
-            socket.onclose = () => {
+            socket.onclose = (e) => {
+                console.log("WebSocket disconnected. Reason: ", e.reason || "No explicit reason.");
                 clearInterval(heartbeatInterval);
                 const badge = document.getElementById('socket-status-badge');
                 badge.className = "px-2.5 py-1 text-[10px] font-mono font-bold rounded bg-red-950 text-red-400 border border-red-900 animate-pulse";
                 badge.textContent = "NETWORK RECONNECTING...";
-                setTimeout(setupWebSocket, 5000);
+                setTimeout(setupWebSocket, 4000);
+            };
+
+            socket.onerror = (err) => {
+                console.error("WebSocket transport level fault captured: ", err);
             };
         }
 
@@ -242,7 +248,9 @@
                 const res = await fetch(`${BACKEND_HTTP}/api/history`);
                 const matrix = await res.json();
                 if (Array.isArray(matrix)) matrix.forEach(p => renderMetricsPacket(p));
-            } catch (e) {}
+            } catch (e) {
+                console.error("HTTP History seed failure: ", e);
+            }
         }
 
         // 🖥️ UI VIEW ROUTER RENDER ENGINE
@@ -285,7 +293,6 @@
             targetTable.insertBefore(tr, targetTable.firstChild);
             if (targetTable.children.length > 30) targetTable.lastChild.remove();
 
-            // Render AI Prediction Cards with explicit buy/sell messages
             if (data.aiPredictedTarget) {
                 const aiFeed = document.getElementById('ai-predictions-list');
                 const existingCard = document.getElementById(`ai-card-${data.symbol}`);
