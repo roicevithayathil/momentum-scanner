@@ -4,15 +4,7 @@ const WebSocket = require('ws');
 const cors = require('cors');
 
 const app = express();
-
-// 🔓 Robust, aggressive CORS handling to guarantee GitHub Pages can connect
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.set('trust proxy', 1); // Allow Render's reverse proxy to route WebSockets cleanly
+app.use(cors()); // 🔓 Allows GitHub Pages frontend to pull historical data safely
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -45,7 +37,7 @@ let modelState = {
     trainedPoints: 0
 };
 
-// ⚙️ FILTER THRESHOLDS (Core Sudden Change Breakdown Scanner Gates)
+// ⚙️ FILTER THRESHOLDS
 const CRYPTO_THRESHOLD = 0.50;
 const FOREX_THRESHOLD = 0.01;
 const NSE_BREAKOUT_THRESHOLD = 2.00;
@@ -132,11 +124,7 @@ function trainModel(newVolume, newChange) {
     modelState.trainedPoints = n;
 }
 
-// 🌐 HISTORY API ENDPOINT WITH ROOT DISAGREEMENT PROTECTION
-app.get('/', (req, res) => {
-    res.send("Tri-Asset AI Engine Gateway is Active.");
-});
-
+// 🌐 HISTORY API ENDPOINT
 app.get('/api/history', (req, res) => {
     res.json(marketHistory);
 });
@@ -144,9 +132,7 @@ app.get('/api/history', (req, res) => {
 // 🪙 PIPELINE A: CRYPTO & FOREX 
 async function trackCryptoAndForex() {
     try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
         const tickers = await response.json();
         const now = Date.now();
 
@@ -167,10 +153,6 @@ async function trackCryptoAndForex() {
                 if (ref && ref.price !== currentPrice) {
                     const dev = ((currentPrice - ref.price) / ref.price) * 100;
                     if (Math.abs(dev) >= FOREX_THRESHOLD) {
-                        const formattedVol = liveVolume >= 1000000 ?
-                            `${(liveVolume/1000000).toFixed(2)}M` :
-                            `${(liveVolume/1000).toFixed(1)}K`;
-
                         const payload = {
                             market: 'FOREX',
                             symbol: formattedFxName,
@@ -180,8 +162,7 @@ async function trackCryptoAndForex() {
                             volume: liveVolume,
                             type: dev > 0 ? 'SURGE' : 'CRASH',
                             timestamp: new Date().toLocaleTimeString(),
-                            news: dev > 0 ?
-                                `🚨 FOREX INFLOW: High liquidity institutional block orders executing buy momentum (${formattedVol}).` : `🚨 FOREX OUTFLOW: High liquidity institutional block orders executing sell pressure (${formattedVol}).`
+                            news: "Institutional liquidity block configuration update."
                         };
                         processAndEmitPayload(payload);
                     }
@@ -198,24 +179,11 @@ async function trackCryptoAndForex() {
                 if (ref && ref.price !== currentPrice) {
                     const dev = ((currentPrice - ref.price) / ref.price) * 100;
                     if (Math.abs(dev) >= CRYPTO_THRESHOLD) {
-
                         let structuralNews = "";
-                        const formattedVol = liveVolume >= 1000000 ?
-                            `${(liveVolume/1000000).toFixed(2)}M` :
-                            `${(liveVolume/1000).toFixed(1)}K`;
-
                         if (Math.abs(dev) >= 3.0) {
-                            structuralNews = dev > 0 ?
-                                `🚨 MASSIVE BUY REPORTED: Whale account executed market buy orders clearing ${formattedVol} in trading volume.` :
-                                `🚨 MASSIVE SELL REPORTED: Whale account dumped market sell orders clearing ${formattedVol} in trading volume.`;
+                            structuralNews = "Whale wallet cluster aggregation pushing orderbook constraints.";
                         } else if (Math.abs(dev) >= 1.5) {
-                            structuralNews = dev > 0 ?
-                                `📈 High-volume buy momentum triggered by algorithmic execution layer (${formattedVol} units).` :
-                                `📉 High-volume sell pressure triggered by algorithmic execution layer (${formattedVol} units).`;
-                        } else {
-                            structuralNews = dev > 0 ?
-                                `📈 Sudden breakout upward with ${formattedVol} cumulative volume.` :
-                                `📉 Sudden crash downward with ${formattedVol} cumulative volume.`;
+                            structuralNews = "High-frequency algorithmic trend-following momentum execution.";
                         }
 
                         const payload = {
@@ -259,9 +227,7 @@ async function scanNseCandleBreakouts() {
     }
 
     try {
-        const response = await fetch('https://api.bseindia.com/BseIndiaAPI/api/GetGroupHearData/w?id=GroupA&page=1&size=100', {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
+        const response = await fetch('https://api.bseindia.com/BseIndiaAPI/api/GetGroupHearData/w?id=GroupA&page=1&size=100');
         const data = await response.json();
         const now = Date.now();
 
@@ -289,21 +255,6 @@ async function scanNseCandleBreakouts() {
             const priceChangePct = ((currentPrice - previousClosePrice) / previousClosePrice) * 100;
 
             if (Math.abs(priceChangePct) >= NSE_BREAKOUT_THRESHOLD) {
-                let structuralNews = "";
-                const formattedVol = liveVolume >= 10000000 ?
-                    `₹${(liveVolume/10000000).toFixed(2)} Cr` :
-                    `₹${(liveVolume/100000).toFixed(1)} Lakhs`;
-
-                if (Math.abs(priceChangePct) >= 4.0) {
-                    structuralNews = priceChangePct > 0 ?
-                        `🚨 INSTITUTIONAL BUY: Massive DII/FII block buy order matching flow imbalances with ${formattedVol} turnover.` :
-                        `🚨 INSTITUTIONAL SELL: Massive DII/FII block liquidation matching flow imbalances with ${formattedVol} turnover.`;
-                } else {
-                    structuralNews = priceChangePct > 0 ?
-                        `📈 Intraday momentum surge tracking positive order book delta (${formattedVol}).` :
-                        `📉 Intraday momentum drop tracking aggressive distribution supply (${formattedVol}).`;
-                }
-
                 const payload = {
                     market: 'NSE',
                     symbol: symbol,
@@ -313,7 +264,7 @@ async function scanNseCandleBreakouts() {
                     volume: liveVolume,
                     type: priceChangePct > 0 ? 'SURGE' : 'CRASH',
                     timestamp: new Date().toLocaleTimeString(),
-                    news: structuralNews,
+                    news: Math.abs(priceChangePct) >= 4.0 ? "Institutional DII/FII block volume imbalance matched." : "",
                     isWhale: Math.abs(priceChangePct) >= 4.0
                 };
                 processAndEmitPayload(payload);
@@ -328,20 +279,24 @@ function processAndEmitPayload(payload) {
     const chg = parseFloat(payload.change || 0);
     const base = parseFloat(payload.currentPrice || 0);
 
+    // 1. Structural Pattern Vector Verification
     const patternMetrics = analyzePatternTrend(payload.symbol, base);
     payload.detectedPattern = patternMetrics.pattern;
     payload.predictedBias = patternMetrics.bias;
 
+    // 2. Machine Learning Linear Regression Interpolation
     trainModel(vol, chg);
     const predictionPct = (modelState.slope * vol) + modelState.intercept;
     payload.aiPredictedTarget = chg > 0 ? base * (1 + Math.abs(predictionPct) / 100) : base * (1 - Math.abs(predictionPct) / 100);
     payload.modelAccuracyPoints = modelState.trainedPoints;
     payload.modelConfidence = Math.min(Math.abs(modelState.slope * 100) + 45, 99.4).toFixed(1);
 
+    // 3. Save to memory cache 
     marketHistory = marketHistory.filter(item => item.symbol !== payload.symbol);
     marketHistory.push(payload);
     if (marketHistory.length > MAX_HISTORY_LIMIT) marketHistory.shift();
 
+    // 4. Broadcast network out
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(payload));
@@ -349,21 +304,8 @@ function processAndEmitPayload(payload) {
     });
 }
 
-// 🌐 SOCKET MESSAGE MANAGER WITH CONSOLE VERIFICATION
-wss.on('connection', (ws, req) => {
-    console.log(`📡 Client connected successfully from origin: ${req.headers.origin}`);
-
-    // 🔥 BACKWARD COMPATIBILITY SNAPSHOT TRIGGER:
-    // When your client connects, immediately transmit whatever historical metrics are in memory
-    // so the frontend turns green and renders data instantly instead of waiting for thresholds!
-    if (marketHistory.length > 0) {
-        marketHistory.forEach(cachedPayload => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(cachedPayload));
-            }
-        });
-    }
-
+// 🌐 SOCKET MESSAGE MANAGER
+wss.on('connection', (ws) => {
     ws.on('message', (msg) => {
         try {
             const parsed = JSON.parse(msg);
@@ -371,15 +313,6 @@ wss.on('connection', (ws, req) => {
         } catch (e) {}
     });
 });
-
-setInterval(trackCryptoAndForex, 4000);
-setInterval(scanNseCandleBreakouts, 3000);
-
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Tri-Asset AI Engine running on port ${PORT}`));
-// Ensure data loops call immediately on startup, then intervals handle the rest
-trackCryptoAndForex();
-scanNseCandleBreakouts();
 
 setInterval(trackCryptoAndForex, 4000);
 setInterval(scanNseCandleBreakouts, 3000);
