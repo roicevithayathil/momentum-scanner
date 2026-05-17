@@ -14,7 +14,7 @@ let cryptoHistory = {};
 let forexHistory = {};
 let nseCandleRegistry = {};
 
-// 🧠 NEW: HISTORICAL MEMORY BUFFER (Stores last 100 global structural breakout payloads)
+// 🧠 HISTORICAL MEMORY BUFFER (Stores last 100 global structural breakout payloads)
 let marketHistory = [];
 const MAX_HISTORY_LIMIT = 100;
 
@@ -25,7 +25,7 @@ const NSE_BREAKOUT_THRESHOLD = 2.00; // 🎯 STRICT 2% MOMENTUM GAIN/LOSS GATE F
 
 const forexWatchlist = ['EURUSDT', 'GBPUSDT', 'AUDUSDT', 'USDCAD', 'USDJPY'];
 
-// 🌐 NEW: HISTORY REST ENDPOINT (Feeds the frontend instantly when the webpage opens)
+// 🌐 HISTORY REST ENDPOINT (Feeds the frontend instantly when the webpage opens)
 app.get('/api/history', (req, res) => {
     res.json(marketHistory);
 });
@@ -37,6 +37,8 @@ async function trackCryptoAndForex() {
         const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
         const tickers = await response.json();
         const now = Date.now();
+
+        if (!Array.isArray(tickers)) return;
 
         tickers.forEach(ticker => {
             const symbol = ticker.symbol;
@@ -204,12 +206,8 @@ async function scanNseCandleBreakouts() {
 
 // 🧠 AUXILIARY CORE: COMMITS DATA ROUTINELY INTO RUNNING HISTORY MATRIX
 function saveToHistoryCache(payload) {
-    // Avoid appending exact duplicate records of the same ticker to keep the cache clean
     marketHistory = marketHistory.filter(item => item.symbol !== payload.symbol);
-
     marketHistory.push(payload);
-
-    // Hard limit to save memory overhead on free cloud tiers
     if (marketHistory.length > MAX_HISTORY_LIMIT) {
         marketHistory.shift();
     }
@@ -217,7 +215,9 @@ function saveToHistoryCache(payload) {
 
 function broadcast(data) {
     wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(data));
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
     });
 }
 
@@ -225,7 +225,8 @@ function broadcast(data) {
 setInterval(trackCryptoAndForex, 4000);
 setInterval(scanNseCandleBreakouts, 3000);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, '0.0.0.0', () => {
+// Dynamic port configuration with clean network routing
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
     console.log(`Institutional Tri-Asset Engine online on port ${PORT}`);
 });
