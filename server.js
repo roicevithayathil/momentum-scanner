@@ -377,3 +377,12 @@ setInterval(scanNseCandleBreakouts, 3000);
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => console.log(`Tri-Asset AI Engine running on port ${PORT}`));
+// Ensure data loops call immediately on startup, then intervals handle the rest
+trackCryptoAndForex();
+scanNseCandleBreakouts();
+
+setInterval(trackCryptoAndForex, 4000);
+setInterval(scanNseCandleBreakouts, 3000);
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => console.log(`Tri-Asset AI Engine running on port ${PORT}`));
