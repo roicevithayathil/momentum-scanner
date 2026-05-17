@@ -4,13 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Institutional Multi-Asset Workspace</title>
+    <title>Momentum Scanner Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Smooth transition for hiding/showing market sections */
-        
         .market-panel {
             transition: all 0.2s ease-in-out;
+        }
+        /* Custom scrollbar style for mobile and desktop tables */
+        
+         ::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+         ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        
+         ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -21,25 +33,25 @@
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-800 pb-4 mb-6 gap-4">
             <div>
                 <h1 class="text-xl font-black text-white tracking-wider">🎛️ TRI-ASSET MOMENTUM CORE</h1>
-                <p class="text-[11px] text-gray-500">Real-time 5m rolling evaluation window for Crypto, Forex, and Indian NSE Equities</p>
+                <p class="text-[11px] text-gray-500">Real-time 5m rolling candle evaluation window (Strict 2% NSE Filter)</p>
             </div>
 
-            <div class="flex bg-gray-900 border border-gray-800 p-1 rounded-lg gap-1 font-mono text-xs">
-                <button onclick="switchView('all')" id="tab-all" class="px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white">
+            <div class="flex flex-wrap bg-gray-900 border border-gray-800 p-1 rounded-lg gap-1 font-mono text-xs w-full md:w-auto">
+                <button onclick="switchView('all')" id="tab-all" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white">
                     🌐 Master View
                 </button>
-                <button onclick="switchView('crypto')" id="tab-crypto" class="px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
-                    🪙 Crypto Desk
+                <button onclick="switchView('crypto')" id="tab-crypto" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
+                    🪙 Crypto
                 </button>
-                <button onclick="switchView('nse')" id="tab-nse" class="px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
+                <button onclick="switchView('nse')" id="tab-nse" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
                     🇮🇳 Indian NSE
                 </button>
-                <button onclick="switchView('forex')" id="tab-forex" class="px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
-                    🌍 Forex Desk
+                <button onclick="switchView('forex')" id="tab-forex" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
+                    🌍 Forex
                 </button>
             </div>
 
-            <div id="status" class="px-3 py-1 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 shadow-md">CORE PROCESSORS RUNNING</div>
+            <div id="status" class="px-3 py-1 rounded text-[10px] font-mono bg-amber-950 text-amber-400 border border-amber-800 shadow-md">CONNECTING TO CLOUD...</div>
         </header>
 
         <div id="workspace-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -51,7 +63,7 @@
                 </h2>
                 <div class="mb-4">
                     <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-surge"></tbody>
                         </table>
@@ -59,7 +71,7 @@
                 </div>
                 <div>
                     <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-crash"></tbody>
                         </table>
@@ -73,16 +85,16 @@
                     <span class="text-[9px] bg-orange-950 text-orange-400 px-1.5 py-0.5 rounded border border-orange-800">IST Session</span>
                 </h2>
                 <div class="mb-4">
-                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts (>= 2%)</h3>
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-surge"></tbody>
                         </table>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns (>= 2%)</h3>
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-crash"></tbody>
                         </table>
@@ -97,7 +109,7 @@
                 </h2>
                 <div class="mb-4">
                     <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Major Surges</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-surge"></tbody>
                         </table>
@@ -105,7 +117,7 @@
                 </div>
                 <div>
                     <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Major Drops</h3>
-                    <div class="max-h-[250px] overflow-y-auto text-xs">
+                    <div class="max-h-[300px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-crash"></tbody>
                         </table>
@@ -117,11 +129,11 @@
     </div>
 
     <script>
-        const socket = new WebSocket('ws://localhost:5000');
+        // 🎯 LINKED DIRECTLY TO YOUR SECURE RENDER CLOCK PRODUCTION STREAM
+        const socket = new WebSocket('wss://momentum-scanner.onrender.com');
         const statusDiv = document.getElementById('status');
         const gridContainer = document.getElementById('workspace-grid');
 
-        // Dynamic Layout Selector Logic
         function switchView(view) {
             const panels = {
                 crypto: document.getElementById('panel-crypto'),
@@ -136,19 +148,15 @@
                 forex: document.getElementById('tab-forex')
             };
 
-            // Reset all navbar button designs
             Object.values(tabs).forEach(t => {
-                t.className = "px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white";
+                t.className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white";
             });
-            // Highlight the active button
-            tabs[view].className = "px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white shadow-md";
+            tabs[view].className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white shadow-md";
 
             if (view === 'all') {
-                // Return layout to 3 columns side-by-side
                 gridContainer.className = "grid grid-cols-1 lg:grid-cols-3 gap-5";
                 Object.values(panels).forEach(p => p.classList.remove('hidden'));
             } else {
-                // Make the single chosen desk stretch out fully across the viewport
                 gridContainer.className = "grid grid-cols-1 gap-5";
                 Object.keys(panels).forEach(key => {
                     if (key === view) {
@@ -161,12 +169,12 @@
         }
 
         socket.onopen = () => {
-            statusDiv.textContent = "CORE PROCESSORS RUNNING";
+            statusDiv.textContent = "CLOUD ENGINE RUNNING";
             statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 shadow-md";
         };
 
         socket.onclose = () => {
-            statusDiv.textContent = "RADAR OFFLINE";
+            statusDiv.textContent = "DISCONNECTED - RECONNECTING";
             statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-red-950 text-red-400 border border-red-900";
         };
 
@@ -185,12 +193,12 @@
 
             const tr = document.createElement('tr');
             tr.id = `row-${data.symbol}`;
-            tr.className = "h-7 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all";
+            tr.className = "h-8 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all";
             tr.innerHTML = `
                 <td class="text-gray-600 font-mono w-16">${data.timestamp.split(' ')[0]}</td>
-                <td class="font-bold text-slate-300 w-20">${data.symbol}</td>
-                <td class="text-gray-500 font-mono w-24">${flag}${data.oldPrice.toFixed(2)}</td>
-                <td class="text-yellow-400 font-mono w-24">${flag}${data.currentPrice.toFixed(2)}</td>
+                <td class="font-bold text-slate-300 w-24">${data.symbol}</td>
+                <td class="text-gray-500 font-mono w-20">${flag}${data.oldPrice.toFixed(2)}</td>
+                <td class="text-yellow-400 font-mono w-20">${flag}${data.currentPrice.toFixed(2)}</td>
                 <td class="font-mono text-right ${metricColor}">${data.type === 'SURGE' ? '+' : ''}${data.change}%</td>
             `;
 
