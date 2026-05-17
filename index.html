@@ -33,7 +33,7 @@
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-800 pb-4 mb-6 gap-4">
             <div>
                 <h1 class="text-xl font-black text-white tracking-wider">🎛️ TRI-ASSET MOMENTUM CORE</h1>
-                <p class="text-[11px] text-gray-500">Real-time 5m rolling candle evaluation window (Strict 2% NSE Filter)</p>
+                <p class="text-[11px] text-gray-500">Real-time 5m rolling window sorted by high-impact percentage magnitude</p>
             </div>
 
             <div class="flex flex-wrap bg-gray-900 border border-gray-800 p-1 rounded-lg gap-1 font-mono text-xs w-full md:w-auto">
@@ -62,16 +62,16 @@
                     <span class="text-[9px] bg-blue-950 text-blue-400 px-1.5 py-0.5 rounded border border-blue-800">24/7</span>
                 </h2>
                 <div class="mb-4">
-                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Top Breakouts</h3>
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-surge"></tbody>
                         </table>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Top Breakdowns</h3>
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-crash"></tbody>
                         </table>
@@ -85,16 +85,16 @@
                     <span class="text-[9px] bg-orange-950 text-orange-400 px-1.5 py-0.5 rounded border border-orange-800">IST Session</span>
                 </h2>
                 <div class="mb-4">
-                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts (>= 2%)</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Top Breakouts (>= 2%)</h3>
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-surge"></tbody>
                         </table>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns (>= 2%)</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Top Breakdowns (>= 2%)</h3>
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-crash"></tbody>
                         </table>
@@ -109,7 +109,7 @@
                 </h2>
                 <div class="mb-4">
                     <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Major Surges</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-surge"></tbody>
                         </table>
@@ -117,7 +117,7 @@
                 </div>
                 <div>
                     <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Major Drops</h3>
-                    <div class="max-h-[300px] overflow-y-auto text-xs">
+                    <div class="max-h-[320px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-crash"></tbody>
                         </table>
@@ -129,10 +129,19 @@
     </div>
 
     <script>
-        // 🎯 FIXED: LINKED DIRECTLY TO YOUR SECURE RENDER CLOCK PRODUCTION STREAM
         const socket = new WebSocket('wss://momentum-scanner-usre.onrender.com');
         const statusDiv = document.getElementById('status');
         const gridContainer = document.getElementById('workspace-grid');
+
+        // Internal data registry to handle complex real-time desc sorting
+        const marketRegistry = {
+            'crypto-surge': [],
+            'crypto-crash': [],
+            'nse-surge': [],
+            'nse-crash': [],
+            'forex-surge': [],
+            'forex-crash': []
+        };
 
         function switchView(view) {
             const panels = {
@@ -140,7 +149,6 @@
                 nse: document.getElementById('panel-nse'),
                 forex: document.getElementById('panel-forex')
             };
-
             const tabs = {
                 all: document.getElementById('tab-all'),
                 crypto: document.getElementById('tab-crypto'),
@@ -148,9 +156,7 @@
                 forex: document.getElementById('tab-forex')
             };
 
-            Object.values(tabs).forEach(t => {
-                t.className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white";
-            });
+            Object.values(tabs).forEach(t => t.className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white");
             tabs[view].className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white shadow-md";
 
             if (view === 'all') {
@@ -158,14 +164,16 @@
                 Object.values(panels).forEach(p => p.classList.remove('hidden'));
             } else {
                 gridContainer.className = "grid grid-cols-1 gap-5";
-                Object.keys(panels).forEach(key => {
-                    if (key === view) {
-                        panels[key].classList.remove('hidden');
-                    } else {
-                        panels[key].classList.add('hidden');
-                    }
-                });
+                Object.keys(panels).forEach(key => panels[key].classList.toggle('hidden', key !== view));
             }
+        }
+
+        // Helper to format raw volume numbers clearly (e.g. 1.2M, 450K)
+        function formatVolume(vol) {
+            if (!vol || isNaN(vol)) return 'N/A';
+            if (vol >= 1000000) return (vol / 1000000).toFixed(1) + 'M';
+            if (vol >= 1000) return (vol / 1000).toFixed(0) + 'K';
+            return vol.toFixed(0);
         }
 
         socket.onopen = () => {
@@ -180,29 +188,41 @@
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
-            let panelKey = `${data.market.toLowerCase()}-${data.type.toLowerCase()}`;
+            const panelKey = `${data.market.toLowerCase()}-${data.type.toLowerCase()}`;
             const targetBlock = document.getElementById(panelKey);
             if (!targetBlock) return;
 
-            let staleRow = document.getElementById(`row-${data.symbol}`);
-            if (staleRow) staleRow.remove();
+            // Remove previous instances of this specific token/stock to rewrite freshest pricing metrics
+            marketRegistry[panelKey] = marketRegistry[panelKey].filter(item => item.symbol !== data.symbol);
 
-            const metricColor = data.type === 'SURGE' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold';
-            const flag = data.market === 'CRYPTO' ? '$' : (data.market === 'NSE' ? '₹' : '');
+            // Inject new ticker node into local registry list
+            marketRegistry[panelKey].push(data);
 
-            const tr = document.createElement('tr');
-            tr.id = `row-${data.symbol}`;
-            tr.className = "h-8 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all";
-            tr.innerHTML = `
-                <td class="text-gray-600 font-mono w-16">${data.timestamp.split(' ')[0]}</td>
-                <td class="font-bold text-slate-300 w-24">${data.symbol}</td>
-                <td class="text-gray-500 font-mono w-20">${flag}${data.oldPrice.toFixed(2)}</td>
-                <td class="text-yellow-400 font-mono w-20">${flag}${data.currentPrice.toFixed(2)}</td>
-                <td class="font-mono text-right ${metricColor}">${data.type === 'SURGE' ? '+' : ''}${data.change}%</td>
-            `;
+            // SORTING MECHANISM: Sort by highest absolute value descending to keep largest moves at the top
+            marketRegistry[panelKey].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
 
-            targetBlock.insertBefore(tr, targetBlock.firstChild);
+            // Completely rebuild DOM container list using freshly sorted arrays
+            targetBlock.innerHTML = '';
+
+            marketRegistry[panelKey].forEach(ticker => {
+                const metricColor = ticker.type === 'SURGE' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold';
+                const currencyFlag = ticker.market === 'CRYPTO' ? '$' : (ticker.market === 'NSE' ? '₹' : '');
+
+                // Read and format volume metric provided by server backend
+                const operationalVolume = ticker.volume ? formatVolume(ticker.volume) : (ticker.turnover ? formatVolume(ticker.turnover) : '--');
+
+                const tr = document.createElement('tr');
+                tr.id = `row-${ticker.symbol}`;
+                tr.className = "h-8 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all font-mono";
+                tr.innerHTML = `
+                    <td class="text-gray-600 font-normal w-12">${ticker.timestamp.split(' ')[0]}</td>
+                    <td class="font-bold text-slate-200 w-20 tracking-wide">${ticker.symbol}</td>
+                    <td class="text-gray-500 w-16">${currencyFlag}${ticker.currentPrice.toFixed(1)}</td>
+                    <td class="text-gray-400 font-semibold w-16 text-center">📊 ${operationalVolume}</td>
+                    <td class="text-right ${metricColor} w-16">${ticker.type === 'SURGE' ? '+' : ''}${ticker.change.toFixed(2)}%</td>
+                `;
+                targetBlock.appendChild(tr);
+            });
         };
     </script>
 </body>
