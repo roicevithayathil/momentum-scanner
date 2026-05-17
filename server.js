@@ -353,6 +353,17 @@ function processAndEmitPayload(payload) {
 wss.on('connection', (ws, req) => {
     console.log(`📡 Client connected successfully from origin: ${req.headers.origin}`);
 
+    // 🔥 BACKWARD COMPATIBILITY SNAPSHOT TRIGGER:
+    // When your client connects, immediately transmit whatever historical metrics are in memory
+    // so the frontend turns green and renders data instantly instead of waiting for thresholds!
+    if (marketHistory.length > 0) {
+        marketHistory.forEach(cachedPayload => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(cachedPayload));
+            }
+        });
+    }
+
     ws.on('message', (msg) => {
         try {
             const parsed = JSON.parse(msg);
