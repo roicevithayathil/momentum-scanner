@@ -341,12 +341,25 @@
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const socket = new WebSocket(`${wsProtocol}${RENDER_HOST}`);
 
+        //socket.onopen = async() => {
+        //    statusDiv.textContent = "CLOUD ENGINE RUNNING";
+        //   statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 shadow-md";
+        //  await loadHistoricalData();
+        // };
         socket.onopen = async() => {
+            // Instantly switch badge to green the millisecond the socket handshake completes
             statusDiv.textContent = "CLOUD ENGINE RUNNING";
             statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 shadow-md";
-            await loadHistoricalData();
-        };
 
+            // Fetch any history if it exists
+            await loadHistoricalData();
+
+            // Safety guard: If history was empty, clear the banner state so it doesn't get stuck
+            if (statusDiv.textContent === "RECOVERING CLOUD HISTORY...") {
+                statusDiv.textContent = "CLOUD ENGINE RUNNING";
+                statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 shadow-md";
+            }
+        };
         socket.onclose = () => {
             statusDiv.textContent = "DISCONNECTED - RECONNECTING";
             statusDiv.className = "px-3 py-1 rounded text-[10px] font-mono bg-red-950 text-red-400 border border-red-900";
