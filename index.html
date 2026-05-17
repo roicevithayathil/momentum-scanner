@@ -252,7 +252,6 @@
             const targetTable = document.getElementById(tableId);
             if (!targetTable) return;
 
-            // Evict existing duplicate symbol rows to guarantee real-time layout updates
             const alternateRow = document.getElementById(`row-${data.symbol}`);
             if (alternateRow) alternateRow.remove();
 
@@ -266,7 +265,6 @@
             const unitMarker = data.market === 'NSE' ? '₹' : (data.market === 'FOREX' ? '' : '$');
             const parsedVolume = data.volume >= 1000000 ? `${(data.volume/1000000).toFixed(1)}M` : (data.volume >= 1000 ? `${(data.volume/1000).toFixed(1)}K` : data.volume.toFixed(0));
 
-            // Select colors for pattern badge based on mathematical indicators
             const bias = data.predictedBias || "CALCULATING";
             const badgeColor = bias.includes('UPTREND') ? 'bg-emerald-950 text-emerald-400 border-emerald-900' : (bias.includes('RISK') ? 'bg-red-950 text-red-400 border-red-900' : 'bg-gray-900 text-gray-500 border-gray-800');
 
@@ -286,7 +284,7 @@
             targetTable.insertBefore(tr, targetTable.firstChild);
             if (targetTable.children.length > 30) targetTable.lastChild.remove();
 
-            // Render AI Prediction Cards
+            // Render AI Prediction Cards with explicit buy/sell messages
             if (data.aiPredictedTarget) {
                 const aiFeed = document.getElementById('ai-predictions-list');
                 const existingCard = document.getElementById(`ai-card-${data.symbol}`);
@@ -294,7 +292,13 @@
 
                 const card = document.createElement('div');
                 card.id = `ai-card-${data.symbol}`;
-                card.className = "bg-gray-950 p-3 rounded-lg font-mono text-[11px] border border-purple-900/30 shadow-md";
+                card.className = "bg-gray-950 p-3 rounded-lg font-mono text-[11px] border border-purple-900/30 shadow-md transition-all hover:border-purple-500/40";
+
+                // Show explicitly clear buy/sell alerts inside the card view if available
+                const alertMessageHtml = data.news ?
+                    `<div class="mt-2 text-[10px] bg-gray-900 p-2 rounded border border-gray-800/80 text-slate-300 leading-relaxed">${data.news}</div>` :
+                    '';
+
                 card.innerHTML = `
                     <div class="flex justify-between font-bold mb-1">
                         <span class="text-purple-400">🤖 ML FOCUS: ${data.symbol}</span>
@@ -308,6 +312,7 @@
                         <span class="text-gray-400">Spot: ${data.currentPrice.toFixed(2)}</span>
                         <span class="text-emerald-400 font-bold">OLS Target: ${data.aiPredictedTarget.toFixed(2)}</span>
                     </div>
+                    ${alertMessageHtml}
                 `;
                 aiFeed.insertBefore(card, aiFeed.firstChild);
                 if (aiFeed.children.length > 15) aiFeed.lastChild.remove();

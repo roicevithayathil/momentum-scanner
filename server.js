@@ -37,7 +37,7 @@ let modelState = {
     trainedPoints: 0
 };
 
-// ⚙️ FILTER THRESHOLDS
+// ⚙️ FILTER THRESHOLDS (Core Sudden Change Breakdown Scanner Gates)
 const CRYPTO_THRESHOLD = 0.50;
 const FOREX_THRESHOLD = 0.01;
 const NSE_BREAKOUT_THRESHOLD = 2.00;
@@ -153,6 +153,10 @@ async function trackCryptoAndForex() {
                 if (ref && ref.price !== currentPrice) {
                     const dev = ((currentPrice - ref.price) / ref.price) * 100;
                     if (Math.abs(dev) >= FOREX_THRESHOLD) {
+                        const formattedVol = liveVolume >= 1000000 ?
+                            `${(liveVolume/1000000).toFixed(2)}M` :
+                            `${(liveVolume/1000).toFixed(1)}K`;
+
                         const payload = {
                             market: 'FOREX',
                             symbol: formattedFxName,
@@ -162,7 +166,9 @@ async function trackCryptoAndForex() {
                             volume: liveVolume,
                             type: dev > 0 ? 'SURGE' : 'CRASH',
                             timestamp: new Date().toLocaleTimeString(),
-                            news: "Institutional liquidity block configuration update."
+                            news: dev > 0 ?
+                                `🚨 FOREX INFLOW: High liquidity institutional block orders executing buy momentum (${formattedVol}).` :
+                                `🚨 FOREX OUTFLOW: High liquidity institutional block orders executing sell pressure (${formattedVol}).`
                         };
                         processAndEmitPayload(payload);
                     }
@@ -179,11 +185,24 @@ async function trackCryptoAndForex() {
                 if (ref && ref.price !== currentPrice) {
                     const dev = ((currentPrice - ref.price) / ref.price) * 100;
                     if (Math.abs(dev) >= CRYPTO_THRESHOLD) {
+
                         let structuralNews = "";
+                        const formattedVol = liveVolume >= 1000000 ?
+                            `${(liveVolume/1000000).toFixed(2)}M` :
+                            `${(liveVolume/1000).toFixed(1)}K`;
+
                         if (Math.abs(dev) >= 3.0) {
-                            structuralNews = "Whale wallet cluster aggregation pushing orderbook constraints.";
+                            structuralNews = dev > 0 ?
+                                `🚨 MASSIVE BUY REPORTED: Whale account executed market buy orders clearing ${formattedVol} in trading volume.` :
+                                `🚨 MASSIVE SELL REPORTED: Whale account dumped market sell orders clearing ${formattedVol} in trading volume.`;
                         } else if (Math.abs(dev) >= 1.5) {
-                            structuralNews = "High-frequency algorithmic trend-following momentum execution.";
+                            structuralNews = dev > 0 ?
+                                `📈 High-volume buy momentum triggered by algorithmic execution layer (${formattedVol} units).` :
+                                `📉 High-volume sell pressure triggered by algorithmic execution layer (${formattedVol} units).`;
+                        } else {
+                            structuralNews = dev > 0 ?
+                                `📈 Sudden breakout upward with ${formattedVol} cumulative volume.` :
+                                `📉 Sudden crash downward with ${formattedVol} cumulative volume.`;
                         }
 
                         const payload = {
@@ -255,6 +274,21 @@ async function scanNseCandleBreakouts() {
             const priceChangePct = ((currentPrice - previousClosePrice) / previousClosePrice) * 100;
 
             if (Math.abs(priceChangePct) >= NSE_BREAKOUT_THRESHOLD) {
+                let structuralNews = "";
+                const formattedVol = liveVolume >= 10000000 ?
+                    `₹${(liveVolume/10000000).toFixed(2)} Cr` :
+                    `₹${(liveVolume/100000).toFixed(1)} Lakhs`;
+
+                if (Math.abs(priceChangePct) >= 4.0) {
+                    structuralNews = priceChangePct > 0 ?
+                        `🚨 INSTITUTIONAL BUY: Massive DII/FII block buy order matching flow imbalances with ${formattedVol} turnover.` :
+                        `🚨 INSTITUTIONAL SELL: Massive DII/FII block liquidation matching flow imbalances with ${formattedVol} turnover.`;
+                } else {
+                    structuralNews = priceChangePct > 0 ?
+                        `📈 Intraday momentum surge tracking positive order book delta (${formattedVol}).` :
+                        `📉 Intraday momentum drop tracking aggressive distribution supply (${formattedVol}).`;
+                }
+
                 const payload = {
                     market: 'NSE',
                     symbol: symbol,
@@ -264,7 +298,7 @@ async function scanNseCandleBreakouts() {
                     volume: liveVolume,
                     type: priceChangePct > 0 ? 'SURGE' : 'CRASH',
                     timestamp: new Date().toLocaleTimeString(),
-                    news: Math.abs(priceChangePct) >= 4.0 ? "Institutional DII/FII block volume imbalance matched." : "",
+                    news: structuralNews,
                     isWhale: Math.abs(priceChangePct) >= 4.0
                 };
                 processAndEmitPayload(payload);
