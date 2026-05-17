@@ -9,101 +9,41 @@ app.use(cors()); // 🔓 Allows GitHub Pages frontend to pull historical data sa
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// 🧠 TRACKING REGISTERS FOR REAL-TIME PIPELINES
+// Tracking registers for candle architecture
 let cryptoHistory = {};
 let forexHistory = {};
 let nseCandleRegistry = {};
 
-// 📊 VECTOR PATTERN MATCHING STORAGE
-let assetPriceStreams = {};
-const MAX_STREAM_WINDOW = 15;
-
-const PATTERN_DICTIONARY = {
-    'DOUBLE_BOTTOM_BULLISH': [1.0, 0.2, 0.6, 0.2, 1.0],
-    'V_SHAPE_RECOVERY': [1.0, 0.7, 0.2, 0.6, 1.0],
-    'HEAD_AND_SHOULDERS': [0.2, 0.6, 0.4, 0.9, 0.4, 0.6, 0.2],
-    'BULLISH_FLAG_PENNANT': [0.1, 0.9, 0.7, 0.8, 0.6, 0.7, 1.2]
-};
-
-// 🧠 MACHINE LEARNING MEMORY BUFFERS
+// 🧠 HISTORICAL MEMORY BUFFER (Stores last 100 global structural breakout payloads)
 let marketHistory = [];
 const MAX_HISTORY_LIMIT = 100;
+
+// Rolling training memory buffer for the learning model (tracks last 200 high-vol events)
 let trainingData = [];
 const MAX_TRAINING_SIZE = 200;
 
+// Default fallback coefficients before the model learns from live data
 let modelState = {
     slope: 0.3,
     intercept: 0.0,
     trainedPoints: 0
 };
 
-// ⚙️ FILTER THRESHOLDS
+// ⚙️ TRADING FILTERS & PRO-PARAMETERS
 const CRYPTO_THRESHOLD = 0.50;
 const FOREX_THRESHOLD = 0.01;
-const NSE_BREAKOUT_THRESHOLD = 2.00;
+const NSE_BREAKOUT_THRESHOLD = 2.00; // 🎯 STRICT 2% MOMENTUM GAIN/LOSS GATE FOR INTRADAY
 
 const forexWatchlist = ['EURUSDT', 'GBPUSDT', 'AUDUSDT', 'USDCAD', 'USDJPY'];
 
-// 📈 GEOMETRIC PATTERN MATHEMATICAL VECTOR ANALYZER
-function analyzePatternTrend(symbol, currentPrice) {
-    if (!assetPriceStreams[symbol]) assetPriceStreams[symbol] = [];
-    assetPriceStreams[symbol].push(currentPrice);
-
-    if (assetPriceStreams[symbol].length > MAX_STREAM_WINDOW) assetPriceStreams[symbol].shift();
-
-    const stream = assetPriceStreams[symbol];
-    if (stream.length < 5) return { pattern: "SCANNING TRACKS", bias: "CALCULATING" };
-
-    const recentSample = stream.slice(-5);
-    const minP = Math.min(...recentSample);
-    const maxP = Math.max(...recentSample);
-    const range = maxP - minP;
-
-    const normalizedStream = recentSample.map(p => range === 0 ? 0.5 : (p - minP) / range);
-
-    let bestMatch = "SCANNED MARKET";
-    let highestCorrelation = 0.75;
-    let dynamicBias = "NEUTRAL CONTINUATION";
-
-    for (const [patternName, signature] of Object.entries(PATTERN_DICTIONARY)) {
-        let dotProduct = 0,
-            mA = 0,
-            mB = 0;
-        const compareLength = Math.min(normalizedStream.length, signature.length);
-
-        for (let i = 0; i < compareLength; i++) {
-            dotProduct += normalizedStream[i] * signature[i];
-            mA += normalizedStream[i] * normalizedStream[i];
-            mB += signature[i] * signature[i];
-        }
-
-        const denominator = Math.sqrt(mA) * Math.sqrt(mB);
-        if (denominator === 0) continue;
-
-        const similarity = dotProduct / denominator;
-
-        if (similarity > highestCorrelation) {
-            highestCorrelation = similarity;
-            bestMatch = patternName;
-        }
-    }
-
-    if (bestMatch.includes('BULLISH') || bestMatch.includes('RECOVERY') || bestMatch.includes('PENNANT')) {
-        dynamicBias = "UPTREND EXPECTED";
-    } else if (bestMatch.includes('SHOULDERS')) {
-        dynamicBias = "REVERSAL RISK";
-    }
-
-    return { pattern: bestMatch.replace(/_/g, ' '), bias: dynamicBias };
-}
-
-// 🤖 LINEAR REGRESSION TRAINING ENGINE
+// Train the Linear Regression model on-the-fly using ordinary least squares
 function trainModel(newVolume, newChange) {
+    // Save normalized metrics to training memory
     trainingData.push({ x: parseFloat(newVolume || 0), y: parseFloat(newChange || 0) });
     if (trainingData.length > MAX_TRAINING_SIZE) trainingData.shift();
 
     const n = trainingData.length;
-    if (n < 5) return;
+    if (n < 5) return; // Wait for at least 5 baseline points to start learning
 
     let sumX = 0,
         sumY = 0,
@@ -116,20 +56,23 @@ function trainModel(newVolume, newChange) {
         sumXX += (trainingData[i].x * trainingData[i].x);
     }
 
+    // Linear Regression Formula calculation
     const denominator = (n * sumXX) - (sumX * sumX);
-    if (denominator === 0) return;
+    if (denominator === 0) return; // Prevent division by zero
 
     modelState.slope = ((n * sumXY) - (sumX * sumY)) / denominator;
     modelState.intercept = (sumY - (modelState.slope * sumX)) / n;
     modelState.trainedPoints = n;
+
+    console.log(`[🤖 AI MODEL UPDATED] Trained Points: ${n} | Slope: ${modelState.slope.toFixed(6)} | Intercept: ${modelState.intercept.toFixed(4)}`);
 }
 
-// 🌐 HISTORY API ENDPOINT
+// 🌐 HISTORY REST ENDPOINT (Feeds the frontend instantly when the webpage opens)
 app.get('/api/history', (req, res) => {
     res.json(marketHistory);
 });
 
-// 🪙 PIPELINE A: CRYPTO & FOREX 
+// 🪙 PIPELINE A: CRYPTO & FOREX DESK (Upgraded to pull live 24h traded volumes)
 async function trackCryptoAndForex() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
@@ -162,9 +105,11 @@ async function trackCryptoAndForex() {
                             volume: liveVolume,
                             type: dev > 0 ? 'SURGE' : 'CRASH',
                             timestamp: new Date().toLocaleTimeString(),
-                            news: "Institutional liquidity block configuration update."
+                            news: Math.abs(dev) > 0.05 ? "Institutional volume block order execution clearing." : ""
                         };
-                        processAndEmitPayload(payload);
+
+                        saveToHistoryCache(payload);
+                        broadcast(payload);
                     }
                 }
                 return;
@@ -179,9 +124,10 @@ async function trackCryptoAndForex() {
                 if (ref && ref.price !== currentPrice) {
                     const dev = ((currentPrice - ref.price) / ref.price) * 100;
                     if (Math.abs(dev) >= CRYPTO_THRESHOLD) {
+
                         let structuralNews = "";
                         if (Math.abs(dev) >= 3.0) {
-                            structuralNews = "Whale wallet cluster aggregation pushing orderbook constraints.";
+                            structuralNews = "Whale wallet cluster aggregation pushing orderbook liquidity bounds.";
                         } else if (Math.abs(dev) >= 1.5) {
                             structuralNews = "High-frequency algorithmic trend-following momentum execution.";
                         }
@@ -198,15 +144,17 @@ async function trackCryptoAndForex() {
                             news: structuralNews,
                             isWhale: Math.abs(dev) >= 3.0
                         };
-                        processAndEmitPayload(payload);
+
+                        saveToHistoryCache(payload);
+                        broadcast(payload);
                     }
                 }
             }
         });
-    } catch (e) { console.error("Crypto Data Error: ", e.message); }
+    } catch (e) { console.error("Crypto/Forex Data Pipeline Error: ", e.message); }
 }
 
-// 🇮🇳 PIPELINE B: INDIAN NSE 
+// 🇮🇳 PIPELINE B: INSTITUTIONAL NSE REAL-TIME SQUEEZE DETECTOR
 async function scanNseCandleBreakouts() {
     const options = { timeZone: 'Asia/Kolkata', hour12: false, weekday: 'short', hour: '2-digit', minute: '2-digit' };
     const indiaTimeFormatter = new Intl.DateTimeFormat('en-US', options);
@@ -222,8 +170,11 @@ async function scanNseCandleBreakouts() {
     });
 
     const currentTimeInMinutes = (hour * 60) + minute;
-    if (weekday === 'Sat' || weekday === 'Sun' || currentTimeInMinutes < 555 || currentTimeInMinutes > 930) {
-        return; // Session protection guard
+    const marketOpenMinutes = (9 * 60) + 15;
+    const marketCloseMinutes = (15 * 60) + 30;
+
+    if (weekday === 'Sat' || weekday === 'Sun' || currentTimeInMinutes < marketOpenMinutes || currentTimeInMinutes > marketCloseMinutes) {
+        return;
     }
 
     try {
@@ -241,20 +192,32 @@ async function scanNseCandleBreakouts() {
             if (!currentPrice || isNaN(currentPrice)) return;
 
             if (!nseCandleRegistry[symbol]) {
-                nseCandleRegistry[symbol] = { lastCandleClose: currentPrice, candleStartTime: now };
+                nseCandleRegistry[symbol] = {
+                    lastCandleClose: currentPrice,
+                    candleStartTime: now
+                };
                 return;
             }
 
             const assetCandle = nseCandleRegistry[symbol];
+
             if (now - assetCandle.candleStartTime >= 300000) {
                 assetCandle.lastCandleClose = currentPrice;
                 assetCandle.candleStartTime = now;
+                console.log(`🔒 [CANDLE ROLLOVER] Locked new 5M candle close for ${symbol} at ₹${currentPrice}`);
             }
 
             const previousClosePrice = assetCandle.lastCandleClose;
             const priceChangePct = ((currentPrice - previousClosePrice) / previousClosePrice) * 100;
 
             if (Math.abs(priceChangePct) >= NSE_BREAKOUT_THRESHOLD) {
+                const triggerType = priceChangePct > 0 ? 'SURGE' : 'CRASH';
+
+                let structuralNews = "";
+                if (Math.abs(priceChangePct) >= 4.0) {
+                    structuralNews = "Institutional DII/FII block volume surge matching massive order flow imbalances.";
+                }
+
                 const payload = {
                     market: 'NSE',
                     symbol: symbol,
@@ -262,60 +225,89 @@ async function scanNseCandleBreakouts() {
                     oldPrice: previousClosePrice,
                     change: parseFloat(priceChangePct.toFixed(2)),
                     volume: liveVolume,
-                    type: priceChangePct > 0 ? 'SURGE' : 'CRASH',
+                    type: triggerType,
                     timestamp: new Date().toLocaleTimeString(),
-                    news: Math.abs(priceChangePct) >= 4.0 ? "Institutional DII/FII block volume imbalance matched." : "",
+                    news: structuralNews,
                     isWhale: Math.abs(priceChangePct) >= 4.0
                 };
-                processAndEmitPayload(payload);
+
+                console.log(`🎯 BREAKOUT: ${symbol} moved ${priceChangePct.toFixed(2)}% with volume!`);
+
+                saveToHistoryCache(payload);
+                broadcast(payload);
             }
         });
-    } catch (error) { console.error("NSE Error: ", error.message); }
+    } catch (error) {
+        console.error("NSE Data Pipeline Scraper Error: ", error.message);
+    }
 }
 
-// ⚙️ UNIFIED ENRICHMENT & DEPLOYMENT ROUTER
-function processAndEmitPayload(payload) {
-    const vol = parseFloat(payload.volume || 0);
-    const chg = parseFloat(payload.change || 0);
-    const base = parseFloat(payload.currentPrice || 0);
-
-    // 1. Structural Pattern Vector Verification
-    const patternMetrics = analyzePatternTrend(payload.symbol, base);
-    payload.detectedPattern = patternMetrics.pattern;
-    payload.predictedBias = patternMetrics.bias;
-
-    // 2. Machine Learning Linear Regression Interpolation
-    trainModel(vol, chg);
-    const predictionPct = (modelState.slope * vol) + modelState.intercept;
-    payload.aiPredictedTarget = chg > 0 ? base * (1 + Math.abs(predictionPct) / 100) : base * (1 - Math.abs(predictionPct) / 100);
-    payload.modelAccuracyPoints = modelState.trainedPoints;
-    payload.modelConfidence = Math.min(Math.abs(modelState.slope * 100) + 45, 99.4).toFixed(1);
-
-    // 3. Save to memory cache 
+// 🧠 AUXILIARY CORE: COMMITS DATA ROUTINELY INTO RUNNING HISTORY MATRIX
+function saveToHistoryCache(payload) {
     marketHistory = marketHistory.filter(item => item.symbol !== payload.symbol);
-    marketHistory.push(payload);
-    if (marketHistory.length > MAX_HISTORY_LIMIT) marketHistory.shift();
 
-    // 4. Broadcast network out
+    // Inject machine learning metrics directly into cached items
+    const volumeMetric = parseFloat(payload.volume || 0);
+    const changeMetric = parseFloat(payload.change || 0);
+
+    trainModel(volumeMetric, changeMetric);
+
+    const basePrice = parseFloat(payload.currentPrice || 0);
+    const predictedChangePct = (modelState.slope * volumeMetric) + modelState.intercept;
+
+    payload.aiPredictedTarget = changeMetric > 0 ?
+        basePrice * (1 + Math.abs(predictedChangePct) / 100) :
+        basePrice * (1 - Math.abs(predictedChangePct) / 100);
+
+    payload.modelAccuracyPoints = modelState.trainedPoints;
+    payload.modelConfidence = Math.min(Math.abs(modelState.slope * 100) + 40, 99.2).toFixed(1);
+
+    marketHistory.push(payload);
+    if (marketHistory.length > MAX_HISTORY_LIMIT) {
+        marketHistory.shift();
+    }
+}
+
+function broadcast(data) {
+    // Inject ML metrics on active live broadcasts
+    const volumeMetric = parseFloat(data.volume || 0);
+    const changeMetric = parseFloat(data.change || 0);
+
+    const basePrice = parseFloat(data.currentPrice || 0);
+    const predictedChangePct = (modelState.slope * volumeMetric) + modelState.intercept;
+
+    data.aiPredictedTarget = changeMetric > 0 ?
+        basePrice * (1 + Math.abs(predictedChangePct) / 100) :
+        basePrice * (1 - Math.abs(predictedChangePct) / 100);
+
+    data.modelAccuracyPoints = modelState.trainedPoints;
+    data.modelConfidence = Math.min(Math.abs(modelState.slope * 100) + 40, 99.2).toFixed(1);
+
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(payload));
+            client.send(JSON.stringify(data));
         }
     });
 }
 
-// 🌐 SOCKET MESSAGE MANAGER
+// 🌐 Handle incoming Frontend Client messages (like the Ping Heartbeat Loop)
 wss.on('connection', (ws) => {
-    ws.on('message', (msg) => {
+    ws.on('message', (message) => {
         try {
-            const parsed = JSON.parse(msg);
-            if (parsed.type === 'PING') ws.send(JSON.stringify({ type: 'PONG' }));
+            const parsed = JSON.parse(message);
+            if (parsed.type === 'PING') {
+                ws.send(JSON.stringify({ type: 'PONG' }));
+            }
         } catch (e) {}
     });
 });
 
+// Global Execution Interval Handlers
 setInterval(trackCryptoAndForex, 4000);
 setInterval(scanNseCandleBreakouts, 3000);
 
+// Dynamic port configuration with clean network routing
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Tri-Asset AI Engine running on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`Institutional Tri-Asset Engine online on port ${PORT}`);
+});
