@@ -10,7 +10,6 @@
         .market-panel {
             transition: all 0.2s ease-in-out;
         }
-        /* Custom scrollbar style for mobile and desktop tables */
         
          ::-webkit-scrollbar {
             width: 4px;
@@ -133,7 +132,6 @@
         const statusDiv = document.getElementById('status');
         const gridContainer = document.getElementById('workspace-grid');
 
-        // Internal data registry to handle complex real-time desc sorting
         const marketRegistry = {
             'crypto-surge': [],
             'crypto-crash': [],
@@ -168,12 +166,11 @@
             }
         }
 
-        // Helper to format raw volume numbers clearly (e.g. 1.2M, 450K)
         function formatVolume(vol) {
-            if (!vol || isNaN(vol)) return 'N/A';
+            if (!vol || isNaN(vol)) return '--';
             if (vol >= 1000000) return (vol / 1000000).toFixed(1) + 'M';
             if (vol >= 1000) return (vol / 1000).toFixed(0) + 'K';
-            return vol.toFixed(0);
+            return Math.round(vol).toString();
         }
 
         socket.onopen = () => {
@@ -187,42 +184,60 @@
         };
 
         socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            const panelKey = `${data.market.toLowerCase()}-${data.type.toLowerCase()}`;
-            const targetBlock = document.getElementById(panelKey);
-            if (!targetBlock) return;
+            try {
+                const data = JSON.parse(event.data);
 
-            // Remove previous instances of this specific token/stock to rewrite freshest pricing metrics
-            marketRegistry[panelKey] = marketRegistry[panelKey].filter(item => item.symbol !== data.symbol);
+                // 🛠️ FIX: Normalizing types to accommodate any incoming string formats (e.g., surge, crash, breakout, breakdown)
+                let rawType = (data.type || '').toUpperCase();
+                let cleanType = 'SURGE'; // Default fallback
+                if (rawType === 'CRASH' || rawType === 'BREAKDOWN' || rawType === 'DROP' || rawType.includes('DOWN')) {
+                    cleanType = 'CRASH';
+                }
 
-            // Inject new ticker node into local registry list
-            marketRegistry[panelKey].push(data);
+                let marketKey = (data.market || 'CRYPTO').toLowerCase();
+                let panelKey = `${marketKey}-${cleanType.toLowerCase()}`;
 
-            // SORTING MECHANISM: Sort by highest absolute value descending to keep largest moves at the top
-            marketRegistry[panelKey].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+                const targetBlock = document.getElementById(panelKey);
+                if (!targetBlock) return;
 
-            // Completely rebuild DOM container list using freshly sorted arrays
-            targetBlock.innerHTML = '';
+                // Strip down previous entry to avoid duplicates
+                marketRegistry[panelKey] = marketRegistry[panelKey].filter(item => item.symbol !== data.symbol);
 
-            marketRegistry[panelKey].forEach(ticker => {
-                const metricColor = ticker.type === 'SURGE' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold';
-                const currencyFlag = ticker.market === 'CRYPTO' ? '$' : (ticker.market === 'NSE' ? '₹' : '');
+                // Save newest dataset
+                marketRegistry[panelKey].push(data);
 
-                // Read and format volume metric provided by server backend
-                const operationalVolume = ticker.volume ? formatVolume(ticker.volume) : (ticker.turnover ? formatVolume(ticker.turnover) : '--');
+                // SORTING: Sort by absolute value of change descending (highest change magnitude on top)
+                marketRegistry[panelKey].sort((a, b) => Math.abs(parseFloat(b.change || 0)) - Math.abs(parseFloat(a.change || 0)));
 
-                const tr = document.createElement('tr');
-                tr.id = `row-${ticker.symbol}`;
-                tr.className = "h-8 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all font-mono";
-                tr.innerHTML = `
-                    <td class="text-gray-600 font-normal w-12">${ticker.timestamp.split(' ')[0]}</td>
-                    <td class="font-bold text-slate-200 w-20 tracking-wide">${ticker.symbol}</td>
-                    <td class="text-gray-500 w-16">${currencyFlag}${ticker.currentPrice.toFixed(1)}</td>
-                    <td class="text-gray-400 font-semibold w-16 text-center">📊 ${operationalVolume}</td>
-                    <td class="text-right ${metricColor} w-16">${ticker.type === 'SURGE' ? '+' : ''}${ticker.change.toFixed(2)}%</td>
-                `;
-                targetBlock.appendChild(tr);
-            });
+                // Render out refreshed sorted layout
+                targetBlock.innerHTML = '';
+
+                marketRegistry[panelKey].forEach(ticker => {
+                    const isUp = cleanType === 'SURGE';
+                    const metricColor = isUp ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold';
+                    const currencyFlag = marketKey === 'crypto' ? '$' : (marketKey === 'nse' ? '₹' : '');
+
+                    const rawVol = ticker.volume || ticker.turnover || 0;
+                    const formattedVol = rawVol ? formatVolume(parseFloat(rawVol)) : '--';
+                    const currentPriceValue = parseFloat(ticker.currentPrice || 0).toFixed(1);
+                    const percentChangeValue = parseFloat(ticker.change || 0).toFixed(2);
+                    const timeString = (ticker.timestamp || '').split(' ')[0] || '--';
+
+                    const tr = document.createElement('tr');
+                    tr.id = `row-${ticker.symbol}`;
+                    tr.className = "h-8 border-b border-gray-800/40 text-[11px] hover:bg-gray-800/20 transition-all font-mono";
+                    tr.innerHTML = `
+                        <td class="text-gray-600 font-normal w-12">${timeString}</td>
+                        <td class="font-bold text-slate-200 w-20 tracking-wide">${ticker.symbol}</td>
+                        <td class="text-gray-500 w-16">${currencyFlag}${currentPriceValue}</td>
+                        <td class="text-gray-400 font-semibold w-16 text-center">📊 ${formattedVol}</td>
+                        <td class="text-right ${metricColor} w-16">${isUp ? '+' : ''}${percentChangeValue}%</td>
+                    `;
+                    targetBlock.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Data tracking parse error:", err);
+            }
         };
     </script>
 </body>
