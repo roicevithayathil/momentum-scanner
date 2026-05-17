@@ -109,8 +109,9 @@
     </main>
 
     <script>
-        const BACKEND_HTTP = "https://momentum-scanner-usre.onrender.com";
-        const BACKEND_WS = "wss://momentum-scanner-usre.onrender.com";
+        // Updated Endpoint configurations matching live production service name
+        const BACKEND_HTTP = "https://momentum-scanner-u5re.onrender.com";
+        const BACKEND_WS = "wss://momentum-scanner-u5re.onrender.com";
 
         let activeTab = "MASTER";
         let socket = null;
@@ -294,7 +295,6 @@
                 card.id = `ai-card-${data.symbol}`;
                 card.className = "bg-gray-950 p-3 rounded-lg font-mono text-[11px] border border-purple-900/30 shadow-md transition-all hover:border-purple-500/40";
 
-                // Show explicitly clear buy/sell alerts inside the card view if available
                 const alertMessageHtml = data.news ?
                     `<div class="mt-2 text-[10px] bg-gray-900 p-2 rounded border border-gray-800/80 text-slate-300 leading-relaxed">${data.news}</div>` :
                     '';

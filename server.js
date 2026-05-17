@@ -132,7 +132,9 @@ app.get('/api/history', (req, res) => {
 // 🪙 PIPELINE A: CRYPTO & FOREX 
 async function trackCryptoAndForex() {
     try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
         const tickers = await response.json();
         const now = Date.now();
 
@@ -246,7 +248,9 @@ async function scanNseCandleBreakouts() {
     }
 
     try {
-        const response = await fetch('https://api.bseindia.com/BseIndiaAPI/api/GetGroupHearData/w?id=GroupA&page=1&size=100');
+        const response = await fetch('https://api.bseindia.com/BseIndiaAPI/api/GetGroupHearData/w?id=GroupA&page=1&size=100', {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
         const data = await response.json();
         const now = Date.now();
 
