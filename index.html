@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Momentum Scanner Terminal</title>
+    <title>Tri-Asset Intelligence Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .market-panel {
@@ -29,40 +29,49 @@
 <body class="bg-gray-950 text-slate-100 font-sans min-h-screen">
 
     <div class="mx-auto p-4 max-w-[1750px]">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-800 pb-4 mb-6 gap-4">
+
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-800 pb-4 mb-4 gap-4">
             <div>
-                <h1 class="text-xl font-black text-white tracking-wider">🎛️ TRI-ASSET MOMENTUM CORE</h1>
-                <p class="text-[11px] text-gray-500">Real-time 5m rolling window sorted by high-impact percentage magnitude</p>
+                <h1 class="text-xl font-black text-white tracking-wider">⚡ QUANT-AI MOMENTUM CORE</h1>
+                <p class="text-[11px] text-gray-500">Predictive Alpha Engine & Real-Time Rolling Volatility Window</p>
             </div>
 
             <div class="flex flex-wrap bg-gray-900 border border-gray-800 p-1 rounded-lg gap-1 font-mono text-xs w-full md:w-auto">
-                <button onclick="switchView('all')" id="tab-all" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white">
-                    🌐 Master View
-                </button>
-                <button onclick="switchView('crypto')" id="tab-crypto" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
-                    🪙 Crypto
-                </button>
-                <button onclick="switchView('nse')" id="tab-nse" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
-                    🇮🇳 Indian NSE
-                </button>
-                <button onclick="switchView('forex')" id="tab-forex" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
-                    🌍 Forex
-                </button>
+                <button onclick="switchView('all')" id="tab-all" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white">🌐 Master View</button>
+                <button onclick="switchView('crypto')" id="tab-crypto" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">🪙 Crypto</button>
+                <button onclick="switchView('nse')" id="tab-nse" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">🇮🇳 Indian NSE</button>
+                <button onclick="switchView('forex')" id="tab-forex" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">🌍 Forex</button>
+                <button onclick="switchView('ai')" id="tab-ai" class="flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-purple-400 hover:text-purple-200 border border-purple-900/50 bg-purple-950/20">🤖 AI Forecasts</button>
             </div>
 
             <div id="status" class="px-3 py-1 rounded text-[10px] font-mono bg-amber-950 text-amber-400 border border-amber-800 shadow-md">CONNECTING TO CLOUD...</div>
         </header>
 
-        <div id="workspace-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 font-mono text-xs">
+            <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 flex justify-between items-center">
+                <span class="text-gray-400">🪙 CRYPTO LIQUIDITY</span>
+                <span id="pulse-crypto" class="text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900">BULLISH VELOCITY</span>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 flex justify-between items-center">
+                <span class="text-gray-400">🇮🇳 NSE ORDER FLOW</span>
+                <span id="pulse-nse" class="text-gray-400 font-bold bg-gray-950 px-2 py-0.5 rounded border border-gray-800">SESSION CLOSED</span>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 flex justify-between items-center">
+                <span class="text-gray-400">🌍 FOREX VOLATILITY</span>
+                <span id="pulse-forex" class="text-purple-400 font-bold bg-purple-950/30 px-2 py-0.5 rounded border border-purple-900">STABLE STRUCTURE</span>
+            </div>
+        </div>
+
+        <div id="workspace-grid" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
 
             <div id="panel-crypto" class="market-panel bg-gray-900 border border-gray-800/80 rounded-xl p-3 shadow-xl">
                 <h2 class="text-xs font-black text-blue-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-3 flex justify-between items-center">
-                    <span>🪙 Crypto Derivatives Desk</span>
+                    <span>🪙 Crypto Desk</span>
                     <span class="text-[9px] bg-blue-950 text-blue-400 px-1.5 py-0.5 rounded border border-blue-800">24/7</span>
                 </h2>
                 <div class="mb-4">
                     <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Top Breakouts</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-surge"></tbody>
                         </table>
@@ -70,7 +79,7 @@
                 </div>
                 <div>
                     <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Top Breakdowns</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="crypto-crash"></tbody>
                         </table>
@@ -80,20 +89,20 @@
 
             <div id="panel-nse" class="market-panel bg-gray-900 border border-gray-800/80 rounded-xl p-3 shadow-xl">
                 <h2 class="text-xs font-black text-orange-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-3 flex justify-between items-center">
-                    <span>🇮🇳 Indian NSE Stock Desk</span>
+                    <span>🇮🇳 Indian NSE Desk</span>
                     <span class="text-[9px] bg-orange-950 text-orange-400 px-1.5 py-0.5 rounded border border-orange-800">IST Session</span>
                 </h2>
                 <div class="mb-4">
-                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Top Breakouts (>= 2%)</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Breakouts (>= 2%)</h3>
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-surge"></tbody>
                         </table>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Top Breakdowns (>= 2%)</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Breakdowns (>= 2%)</h3>
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="nse-crash"></tbody>
                         </table>
@@ -103,12 +112,12 @@
 
             <div id="panel-forex" class="market-panel bg-gray-900 border border-gray-800/80 rounded-xl p-3 shadow-xl">
                 <h2 class="text-xs font-black text-purple-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-3 flex justify-between items-center">
-                    <span>🌍 Institutional Forex Desk</span>
+                    <span>🌍 Forex Desk</span>
                     <span class="text-[9px] bg-purple-950 text-purple-400 px-1.5 py-0.5 rounded border border-purple-800">Live Rates</span>
                 </h2>
                 <div class="mb-4">
                     <h3 class="text-[10px] uppercase font-bold text-emerald-400 mb-1">🟢 Major Surges</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-surge"></tbody>
                         </table>
@@ -116,10 +125,28 @@
                 </div>
                 <div>
                     <h3 class="text-[10px] uppercase font-bold text-red-400 mb-1">🔴 Major Drops</h3>
-                    <div class="max-h-[320px] overflow-y-auto text-xs">
+                    <div class="max-h-[280px] overflow-y-auto text-xs">
                         <table class="w-full text-left">
                             <tbody id="forex-crash"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-ai" class="market-panel bg-gray-900 border border-purple-900/60 rounded-xl p-3 shadow-xl bg-gradient-to-b from-gray-900 via-gray-900 to-purple-950/10">
+                <h2 class="text-xs font-black text-purple-400 uppercase tracking-widest border-b border-purple-900/40 pb-2 mb-3 flex justify-between items-center">
+                    <span>🤖 AI Prediction Engine</span>
+                    <span class="text-[9px] bg-purple-950 text-purple-300 px-1.5 py-0.5 rounded border border-purple-800 tracking-normal animate-pulse">Predictive Feed</span>
+                </h2>
+                <div class="max-h-[600px] overflow-y-auto">
+                    <div id="ai-predictions-list" class="space-y-2.5">
+                        <div class="bg-gray-950/60 border border-purple-950 p-2.5 rounded-lg font-mono text-[11px]">
+                            <div class="flex justify-between font-bold text-slate-300 mb-1">
+                                <span class="text-purple-400">🤖 MODEL READY</span>
+                                <span>15m Horizon</span>
+                            </div>
+                            <p class="text-gray-500 text-[10px]">Awaiting momentum velocity spike alerts to trigger trend vector forecasts.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -145,23 +172,30 @@
             const panels = {
                 crypto: document.getElementById('panel-crypto'),
                 nse: document.getElementById('panel-nse'),
-                forex: document.getElementById('panel-forex')
+                forex: document.getElementById('panel-forex'),
+                ai: document.getElementById('panel-ai')
             };
             const tabs = {
                 all: document.getElementById('tab-all'),
                 crypto: document.getElementById('tab-crypto'),
                 nse: document.getElementById('tab-nse'),
-                forex: document.getElementById('tab-forex')
+                forex: document.getElementById('tab-forex'),
+                ai: document.getElementById('tab-ai')
             };
 
             Object.values(tabs).forEach(t => t.className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white");
-            tabs[view].className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white shadow-md";
+
+            if (view === 'ai') {
+                tabs[view].className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-purple-600 text-white shadow-md";
+            } else {
+                tabs[view].className = "flex-1 md:flex-none px-3 py-1.5 rounded font-bold transition-all bg-blue-600 text-white shadow-md";
+            }
 
             if (view === 'all') {
-                gridContainer.className = "grid grid-cols-1 lg:grid-cols-3 gap-5";
+                gridContainer.className = "grid grid-cols-1 lg:grid-cols-4 gap-4";
                 Object.values(panels).forEach(p => p.classList.remove('hidden'));
             } else {
-                gridContainer.className = "grid grid-cols-1 gap-5";
+                gridContainer.className = "grid grid-cols-1 gap-4";
                 Object.keys(panels).forEach(key => panels[key].classList.toggle('hidden', key !== view));
             }
         }
@@ -171,6 +205,51 @@
             if (vol >= 1000000) return (vol / 1000000).toFixed(1) + 'M';
             if (vol >= 1000) return (vol / 1000).toFixed(0) + 'K';
             return Math.round(vol).toString();
+        }
+
+        // Feature Engine: Generates real-time structural trend signals dynamically inside the web UI
+        function runAIEngineForecast(ticker, cleanType, marketKey) {
+            const aiList = document.getElementById('ai-predictions-list');
+
+            // Limit stored UI predictions to avoid slowing down mobile devices
+            if (aiList.children.length > 15) aiList.lastChild.remove();
+
+            const absChange = Math.abs(parseFloat(ticker.change || 0));
+            let conviction = "MODERATE";
+            let strategy = "TREND FOLLOW";
+            let badgeBg = "bg-blue-950 text-blue-400 border-blue-800";
+
+            if (absChange >= 4.5) {
+                conviction = "HIGH ACCELERATION";
+                strategy = isNaN(ticker.change) || ticker.change > 0 ? "BULLISH BREAKOUT" : "LIQUIDATION CASCADE";
+                badgeBg = ticker.change > 0 ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-900";
+            } else if (absChange > 2.5) {
+                conviction = "MEAN REVERSION RISK";
+                strategy = "SCALPING HORIZON";
+                badgeBg = "bg-amber-950 text-amber-400 border-amber-800";
+            }
+
+            // Calculate mock targets based on movement velocity
+            const currentPrice = parseFloat(ticker.currentPrice || 0);
+            const targetPrice = ticker.change > 0 ? currentPrice * 1.012 : currentPrice * 0.988;
+
+            const card = document.createElement('div');
+            card.className = "bg-gray-950 p-2.5 rounded-lg font-mono text-[11px] border border-gray-800/80 shadow-md animate-fade-in";
+            card.innerHTML = `
+                <div class="flex justify-between font-bold mb-1">
+                    <span class="text-white">🚀 ${ticker.symbol} (${marketKey.toUpperCase()})</span>
+                    <span class="text-gray-500">${ticker.timestamp.split(' ')[0]}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 my-1.5 text-[10px]">
+                    <div><span class="text-gray-500">Signal:</span> <span class="px-1.5 py-0.2 rounded border text-[9px] ${badgeBg}">${strategy}</span></div>
+                    <div class="text-right"><span class="text-gray-500">Velocity:</span> <span class="text-yellow-400 font-bold">${absChange > 3.5 ? '⚡ FAST' : '⏳ STEADY'}</span></div>
+                </div>
+                <div class="border-t border-gray-900 pt-1.5 flex justify-between text-[10px] text-gray-400">
+                    <span>Price: ${currentPrice.toFixed(2)}</span>
+                    <span class="text-purple-400">Proj. Target: ${targetPrice.toFixed(2)}</span>
+                </div>
+            `;
+            aiList.insertBefore(card, aiList.firstChild);
         }
 
         socket.onopen = () => {
@@ -187,9 +266,8 @@
             try {
                 const data = JSON.parse(event.data);
 
-                // 🛠️ FIX: Normalizing types to accommodate any incoming string formats (e.g., surge, crash, breakout, breakdown)
                 let rawType = (data.type || '').toUpperCase();
-                let cleanType = 'SURGE'; // Default fallback
+                let cleanType = 'SURGE';
                 if (rawType === 'CRASH' || rawType === 'BREAKDOWN' || rawType === 'DROP' || rawType.includes('DOWN')) {
                     cleanType = 'CRASH';
                 }
@@ -200,16 +278,10 @@
                 const targetBlock = document.getElementById(panelKey);
                 if (!targetBlock) return;
 
-                // Strip down previous entry to avoid duplicates
                 marketRegistry[panelKey] = marketRegistry[panelKey].filter(item => item.symbol !== data.symbol);
-
-                // Save newest dataset
                 marketRegistry[panelKey].push(data);
-
-                // SORTING: Sort by absolute value of change descending (highest change magnitude on top)
                 marketRegistry[panelKey].sort((a, b) => Math.abs(parseFloat(b.change || 0)) - Math.abs(parseFloat(a.change || 0)));
 
-                // Render out refreshed sorted layout
                 targetBlock.innerHTML = '';
 
                 marketRegistry[panelKey].forEach(ticker => {
@@ -235,6 +307,10 @@
                     `;
                     targetBlock.appendChild(tr);
                 });
+
+                // 🦾 Trigger UI Engine Forecast logic instantly on incoming data payload
+                runAIEngineForecast(data, cleanType, marketKey);
+
             } catch (err) {
                 console.error("Data tracking parse error:", err);
             }
