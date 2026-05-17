@@ -181,8 +181,7 @@ async function trackCryptoAndForex() {
                             type: dev > 0 ? 'SURGE' : 'CRASH',
                             timestamp: new Date().toLocaleTimeString(),
                             news: dev > 0 ?
-                                `🚨 FOREX INFLOW: High liquidity institutional block orders executing buy momentum (${formattedVol}).` :
-                                `🚨 FOREX OUTFLOW: High liquidity institutional block orders executing sell pressure (${formattedVol}).`
+                                `🚨 FOREX INFLOW: High liquidity institutional block orders executing buy momentum (${formattedVol}).` : `🚨 FOREX OUTFLOW: High liquidity institutional block orders executing sell pressure (${formattedVol}).`
                         };
                         processAndEmitPayload(payload);
                     }
