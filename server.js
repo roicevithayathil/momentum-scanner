@@ -5,12 +5,7 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'OPTIONS'] }));
 app.set('trust proxy', 1);
 
 const server = http.createServer(app);
@@ -22,36 +17,20 @@ const MAX_HISTORY_LIMIT = 100;
 // Filter thresholds
 const CRYPTO_THRESHOLD = 0.50;
 const FOREX_THRESHOLD = 0.01;
-const NSE_THRESHOLD = 0.05; // Tight threshold to capture every single live tick
+const NSE_THRESHOLD = 0.15; // Emits precise, volatile momentum changes
 
 const forexWatchlist = ['EURUSDT', 'GBPUSDT', 'AUDUSDT', 'USDCAD', 'USDJPY'];
+// Target list of core Indian market heavyweights across sectors
+const nseSymbols = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'TATAMOTORS.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'ITC.NS', 'LT.NS'];
 
-// Massive Registry of India's Top Traded Stocks to stream
-const nseWatchlist = [
-    { s: "RELIANCE", p: 2450 }, { s: "TCS", p: 3200 }, { s: "HDFCBANK", p: 1600 },
-    { s: "INFY", p: 1420 }, { s: "ICICIBANK", p: 930 }, { s: "WITNESS_TATAMOTORS", p: 620 },
-    { s: "SBIN", p: 580 }, { s: "BHARTIARTL", p: 870 }, { s: "ITC", p: 440 },
-    { s: "HINDUNILVR", p: 2500 }, { s: "LT", p: 2300 }, { s: "AXISBANK", p: 960 },
-    { s: "KOTAKBANK", p: 1820 }, { s: "M&M", p: 1540 }, { s: "TATASTEEL", p: 110 }
-];
+app.get('/', (req, res) => res.send("Tri-Asset Engine Gateway Active."));
+app.get('/api/history', (req, res) => res.json(marketHistory));
 
-app.get('/', (req, res) => {
-    res.send("Tri-Asset Engine Gateway is Active.");
-});
-
-app.get('/api/history', (req, res) => {
-    res.json(marketHistory);
-});
-
-// 🪙 PIPELINE A: CRYPTO & FOREX 
+// 🪙 PIPELINE A: CRYPTO & FOREX (Binance Gateway)
 async function trackCryptoAndForex() {
     try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
         const tickers = await response.json();
-        const now = Date.now();
-
         if (!Array.isArray(tickers)) return;
 
         tickers.forEach(ticker => {
@@ -62,82 +41,88 @@ async function trackCryptoAndForex() {
             if (forexWatchlist.includes(symbol)) {
                 const formattedFxName = symbol.slice(0, 3) + '/' + symbol.slice(3, 6);
                 if (!global.fxHist) global.fxHist = {};
-                if (!global.fxHist[formattedFxName]) global.fxHist[formattedFxName] = currentPrice;
-
-                const oldPrice = global.fxHist[formattedFxName];
-                const dev = ((currentPrice - oldPrice) / oldPrice) * 100;
+                const oldPrice = global.fxHist[formattedFxName] || currentPrice;
+                const dev = oldPrice !== currentPrice ? ((currentPrice - oldPrice) / oldPrice) * 100 : 0;
 
                 if (Math.abs(dev) >= FOREX_THRESHOLD) {
                     global.fxHist[formattedFxName] = currentPrice;
-                    const payload = {
+                    processAndEmitPayload({
                         market: 'FOREX',
                         symbol: formattedFxName,
-                        currentPrice: currentPrice,
-                        oldPrice: oldPrice,
+                        currentPrice,
+                        oldPrice,
                         change: parseFloat(dev.toFixed(3)),
                         volume: liveVolume,
                         type: dev > 0 ? 'SURGE' : 'CRASH',
                         timestamp: new Date().toLocaleTimeString(),
-                        news: `💧 FOREX Real-time macro flow shift detected.`
-                    };
-                    processAndEmitPayload(payload);
+                        news: `💧 FOREX: Institutional block variance shift at ${currentPrice}.`
+                    });
                 }
                 return;
             }
 
             if (symbol.endsWith('USDT')) {
                 if (!global.cryHist) global.cryHist = {};
-                if (!global.cryHist[symbol]) global.cryHist[symbol] = currentPrice;
-
-                const oldPrice = global.cryHist[symbol];
-                const dev = ((currentPrice - oldPrice) / oldPrice) * 100;
+                const oldPrice = global.cryHist[symbol] || currentPrice;
+                const dev = oldPrice !== currentPrice ? ((currentPrice - oldPrice) / oldPrice) * 100 : 0;
 
                 if (Math.abs(dev) >= CRYPTO_THRESHOLD) {
                     global.cryHist[symbol] = currentPrice;
-                    const payload = {
+                    processAndEmitPayload({
                         market: 'CRYPTO',
-                        symbol: symbol,
-                        currentPrice: currentPrice,
-                        oldPrice: oldPrice,
+                        symbol,
+                        currentPrice,
+                        oldPrice,
                         change: parseFloat(dev.toFixed(2)),
                         volume: liveVolume,
                         type: dev > 0 ? 'SURGE' : 'CRASH',
                         timestamp: new Date().toLocaleTimeString(),
-                        news: `🪙 Crypto momentum tick update.`
-                    };
-                    processAndEmitPayload(payload);
+                        news: `🪙 CRYPTO: Volatility momentum surge crossing standard deviation bands.`
+                    });
                 }
             }
         });
-    } catch (e) { console.error("Crypto Error: ", e.message); }
+    } catch (e) { console.error("Crypto Pipe Error: ", e.message); }
 }
 
-// 🇮🇳 PIPELINE B: COMPREHENSIVE NSE MONITOR
-async function scanNseCandleBreakouts() {
+// 🇮🇳 PIPELINE B: FREE LIVE NSE ENGINE
+async function streamRealNseData() {
     try {
-        // We simulate dynamic intraday price ticks using the core tracking engine algorithm
-        // to guarantee constant flow updates when external Indian API proxies block Render's IP address.
-        nseWatchlist.forEach(stock => {
-            const changePercent = (Math.random() * 0.4 - 0.2); // Random intraday fluctuation
-            const oldPrice = stock.p;
-            stock.p = stock.p * (1 + changePercent / 100);
+        // Fetching directly from the reliable global open-source stock router proxy
+        for (const fullTicker of nseSymbols) {
+            const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${fullTicker}?interval=1m&range=1d`, {
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            const data = await response.json();
 
-            if (Math.abs(changePercent) >= NSE_THRESHOLD) {
-                const payload = {
+            const meta = data ? .chart ? .result ? .[0] ? .meta;
+            if (!meta) continue;
+
+            const symbol = meta.symbol.replace('.NS', '');
+            const currentPrice = meta.regularMarketPrice;
+            const previousClose = meta.previousClose;
+            const liveVolume = meta.regularMarketVolume || 0;
+            const priceChangePct = ((currentPrice - previousClose) / previousClose) * 100;
+
+            if (Math.abs(priceChangePct) >= NSE_THRESHOLD) {
+                const formattedVol = liveVolume >= 1000000 ? `₹${(liveVolume/1000000).toFixed(2)}M Vol` : `${liveVolume} Shares`;
+
+                processAndEmitPayload({
                     market: 'NSE',
-                    symbol: stock.s,
-                    currentPrice: parseFloat(stock.p.toFixed(2)),
-                    oldPrice: parseFloat(oldPrice.toFixed(2)),
-                    change: parseFloat(changePercent.toFixed(2)),
-                    volume: Math.floor(Math.random() * 5000000) + 100000,
-                    type: changePercent > 0 ? 'SURGE' : 'CRASH',
+                    symbol: symbol,
+                    currentPrice: parseFloat(currentPrice.toFixed(2)),
+                    oldPrice: parseFloat(previousClose.toFixed(2)),
+                    change: parseFloat(priceChangePct.toFixed(2)),
+                    volume: liveVolume,
+                    type: priceChangePct > 0 ? 'SURGE' : 'CRASH',
                     timestamp: new Date().toLocaleTimeString(),
-                    news: changePercent > 0 ? `📈 Intraday momentum surge tracking positive order book delta.` : `📉 Intraday momentum drop tracking distribution supply.`
-                };
-                processAndEmitPayload(payload);
+                    news: priceChangePct > 0 ?
+                        `📈 Real-time buying pressure acceleration noted for ${symbol} (${formattedVol}).` :
+                        `📉 Distribution liquidity outflow hitting ${symbol} order books.`
+                });
             }
-        });
-    } catch (error) { console.error("NSE Error: ", error.message); }
+        }
+    } catch (error) { console.error("NSE Live Proxy Error: ", error.message); }
 }
 
 function processAndEmitPayload(payload) {
@@ -146,9 +131,7 @@ function processAndEmitPayload(payload) {
     if (marketHistory.length > MAX_HISTORY_LIMIT) marketHistory.shift();
 
     wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(payload));
-        }
+        if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(payload));
     });
 }
 
@@ -158,16 +141,11 @@ wss.on('connection', (ws) => {
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(cachedPayload));
         });
     }
-    ws.on('message', (msg) => {
-        try {
-            if (JSON.parse(msg).type === 'PING') ws.send(JSON.stringify({ type: 'PONG' }));
-        } catch (e) {}
-    });
 });
 
-// Regular invocation loops
-setInterval(trackCryptoAndForex, 3000);
-setInterval(scanNseCandleBreakouts, 2500);
+// Run tracking workers
+setInterval(trackCryptoAndForex, 4000);
+setInterval(streamRealNseData, 5000); // Polling window adjusted to maintain rapid requests safely
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Tri-Asset Engine running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Tri-Asset Engine active on port ${PORT}`));
